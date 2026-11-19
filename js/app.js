@@ -44,8 +44,16 @@ async function hashPassword(password,saltHex){
  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:210000,hash:"SHA-256"},key,256);
  return {salt:Array.from(salt,b=>b.toString(16).padStart(2,"0")).join(""),hash:Array.from(new Uint8Array(bits),b=>b.toString(16).padStart(2,"0")).join("")};
 }
+
+async function ensureDefaultAdmin(){
+ const admins=await getAll("admin");
+ if(admins.length) return; // preserva qualquer administrador já cadastrado
+ const secured=await hashPassword("adm");
+ await put("admin",{id:1,username:"adm",salt:secured.salt,password_hash:secured.hash,created_at:new Date().toISOString(),default_credentials:true});
+}
+
 async function start(){
- try{db=await openDB();await initializeData();}catch(err){console.error(err);toast("Não foi possível abrir o armazenamento local deste navegador.");return}
+ try{db=await openDB();await initializeData();await ensureDefaultAdmin();}catch(err){console.error(err);toast("Não foi possível abrir o armazenamento local deste navegador.");return}
  if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});
  if(isAdmin())await showApp();else await showPublic();
 }
@@ -72,8 +80,8 @@ $("backToAdminLogin").onclick=showAdminLogin;
 $("adminRegisterForm").addEventListener("submit",async e=>{
  e.preventDefault();
  const username=$("newAdminUsername").value.trim(),password=$("newAdminPassword").value,confirmPassword=$("confirmAdminPassword").value;
- if(username.length<4||username.length>40){msgLogin("O usuário deve ter entre 4 e 40 caracteres.");return}
- if(password.length<8){msgLogin("A senha deve ter pelo menos 8 caracteres.");return}
+ if(username.length<3||username.length>40){msgLogin("O usuário deve ter entre 3 e 40 caracteres.");return}
+ if(password.length<3){msgLogin("A senha deve ter pelo menos 3 caracteres.");return}
  if(password!==confirmPassword){msgLogin("As senhas informadas não são iguais.");return}
  msgLogin("Criando administrador neste computador...");
  const admins=await getAll("admin");if(admins.length){msgLogin("Já existe um administrador cadastrado neste navegador.");showAdminLogin();return}
@@ -168,25 +176,41 @@ $("membersTable").onclick=async e=>{if(!requireAdmin())return;const id=e.target.
 $("entriesTable").onclick=async e=>{if(!requireAdmin())return;const id=e.target.dataset.delete||e.target.dataset.status;if(!id)return;if(e.target.dataset.delete!==undefined){if(!confirm("Excluir este lançamento?"))return;await remove("entries",id);await loadAll()}else{const r=entries.find(x=>x.id===id);const next=prompt("Novo status: Pendente, Sim ou Não",r.status);if(!["Pendente","Sim","Não"].includes(next))return;await put("entries",{...r,status:next});await loadAll()}};
 $("settingsForm").onsubmit=async e=>{e.preventDefault();if(!requireAdmin())return;const row={id:1,ratio:n($("sRatio").value),warehouse_capacity:n($("sWarehouse").value),vault_capacity:n($("sVault").value),machines:n($("sMachines").value),essence_per_machine:n($("sEssMachine").value),cycle_minutes:n($("sCycle").value),delivery_quantity:n($("sDeliveryQty").value),delivery_count:n($("sDeliveryCount").value)};await put("settings",row);toast("Configurações salvas.");await loadAll()};
 $("dashDate").onchange=render;$("filterDate").onchange=render;$("filterTeam").onchange=render;$("filterStatus").onchange=render;
-$("runReport").onclick=()=>{const rs=entries.filter(x=>(!$("fromDate").value||x.entry_date>=$("fromDate").value)&&(!$("toDate").value||x.entry_date<=$("toDate").value));$("reportResult").innerHTML=`<p>Essências: <b>${fmt(rs.reduce((a,x)=>a+n(x.essence),0))}</b></p><p>Joias produzidas (equivalente): <b>${fmt(jewels(rs.reduce((a,x)=>a+n(x.essence),0)))}</b></p><p>Joias entregues: <b>${fmt(rs.filter(x=>x.status==="Sim").reduce((a,x)=>a+n(x.jewels),0))}</b></p><p>Registros: <b>${rs.length}</b></p>`};
-$("exportBackup").onclick=async()=>{
- const data={app:"OneState",version:1,exported_at:new Date().toISOString(),members:await getAll("members"),entries:await getAll("entries"),settings:await new Promise(resolve=>{const r=store("settings").get(1);r.onsuccess=()=>resolve(r.result)})};
- const a=document.createElement("a"),url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));a.href=url;a.download="onestate-copia-de-seguranca.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-};
-$("importBackupBtn").onclick=()=>$("importBackupFile").click();
-$("importBackupFile").onchange=async e=>{
- const file=e.target.files?.[0];if(!file)return;
- try{
-  const data=JSON.parse(await file.text());
-  if(!Array.isArray(data.members)||!Array.isArray(data.entries)||!data.settings)throw new Error("Arquivo inválido");
-  if(!confirm("A restauração substituirá todos os membros, lançamentos e parâmetros atuais. Deseja continuar?"))return;
-  await clearStore("members");await clearStore("entries");
-  for(const m of data.members)await put("members",m);
-  for(const row of data.entries)await put("entries",row);
-  await put("settings",{...DEFAULT_SETTINGS,...data.settings,id:1});
-  toast("Cópia de segurança restaurada.");await loadAll();
- }catch(err){console.error(err);toast("Não foi possível restaurar. Verifique o arquivo JSON.");}
- finally{e.target.value=""}
+$("reportDate").value=today();
+$("generateDailyPdf").onclick=()=>{
+ const date=$("reportDate").value||today();
+ const dayEntries=entries.filter(x=>x.entry_date===date);
+ const escHtml=v=>String(v??"—").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+ const totalEss=dayEntries.reduce((a,x)=>a+n(x.essence),0);
+ const totalJewels=dayEntries.filter(x=>x.kind==="delivery"&&x.status==="Sim").reduce((a,x)=>a+n(x.jewels),0);
+ const productionCount=dayEntries.filter(x=>x.kind==="production").length;
+ const deliveryCount=dayEntries.filter(x=>x.kind==="delivery").length;
+ const dateBR=date.split("-").reverse().join("/");
+ const memberRows=members.slice().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).map(m=>{
+   const rows=dayEntries.filter(x=>x.member_id===m.id).sort((a,b)=>(a.kind||"").localeCompare(b.kind||""));
+   const prod=rows.filter(x=>x.kind==="production");
+   const dels=rows.filter(x=>x.kind==="delivery");
+   const essence=prod.reduce((a,x)=>a+n(x.essence),0);
+   const delivered=dels.filter(x=>x.status==="Sim").reduce((a,x)=>a+n(x.jewels),0);
+   const details=rows.length?rows.map(x=>`<tr><td>${x.kind==="production"?"Produção":"Entrega"}</td><td>${fmt(x.essence)}</td><td>${fmt(x.jewels)}</td><td>${escHtml(x.time_slot||"—")}</td><td>${escHtml(x.status)}</td><td>${escHtml(x.notes||"—")}</td></tr>`).join(""):'<tr><td colspan="6" class="empty">Nenhum lançamento nesta data.</td></tr>';
+   return `<section class="member"><div class="member-head"><div><h2>${escHtml(m.name)}</h2><p>${escHtml(m.team)} · Nível ${fmt(m.game_level||1)} · ${escHtml(m.member_rank||"CRIA")} · ${m.active?"Ativo":"Inativo"}</p></div><div class="member-total"><b>${fmt(essence)}</b><small>essências</small><b>${fmt(delivered)}</b><small>joias entregues</small></div></div><table><thead><tr><th>Tipo</th><th>Essências</th><th>Joias</th><th>Horário</th><th>Status</th><th>Observações</th></tr></thead><tbody>${details}</tbody></table></section>`;
+ }).join("");
+ const doc=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>OneState - Relatório diário ${dateBR}</title><style>
+ @page{size:A4;margin:14mm}*{box-sizing:border-box}body{font:12px Arial,sans-serif;color:#172033;margin:0}
+ header{border-bottom:3px solid #153b70;padding-bottom:12px;margin-bottom:16px}h1{font-size:22px;margin:0 0 5px;color:#153b70}header p{margin:0;color:#596579}
+ .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 20px}.card{border:1px solid #d9e0e9;border-radius:7px;padding:9px}.card b{display:block;font-size:18px;color:#153b70}.card span{font-size:10px;color:#596579}
+ .member{margin:0 0 17px;break-inside:avoid}.member-head{display:flex;justify-content:space-between;align-items:center;background:#f1f5fa;padding:8px 10px;border-left:4px solid #153b70}.member h2{font-size:14px;margin:0 0 3px}.member p{margin:0;color:#596579;font-size:10px}.member-total{display:flex;gap:5px;align-items:baseline}.member-total b{font-size:12px;color:#153b70}.member-total small{font-size:9px;color:#596579;margin-right:8px}
+ table{width:100%;border-collapse:collapse;margin-top:5px;font-size:10px}th{background:#e8edf4;text-align:left}th,td{border:1px solid #dce2ea;padding:5px} .empty{text-align:center;color:#788395}
+ footer{margin-top:20px;border-top:1px solid #dce2ea;padding-top:8px;color:#788395;font-size:9px}
+ @media print{button{display:none}}
+ </style></head><body><header><h1>OneState | Relatório diário</h1><p>Data: ${dateBR} · Gerado em ${new Date().toLocaleString("pt-BR")}</p></header>
+ <div class="summary"><div class="card"><b>${members.length}</b><span>Membros cadastrados</span></div><div class="card"><b>${fmt(totalEss)}</b><span>Essências registradas</span></div><div class="card"><b>${fmt(totalJewels)}</b><span>Joias entregues</span></div><div class="card"><b>${productionCount} / ${deliveryCount}</b><span>Registros de produção / entrega</span></div></div>
+ <h2 style="font-size:16px;color:#153b70">Histórico individual dos membros</h2>${memberRows}
+ <footer>Relatório gerado pelo OneState. Os dados apresentados correspondem aos lançamentos armazenados neste navegador.</footer>
+ <script>window.onload=()=>setTimeout(()=>window.print(),250);</script></body></html>`;
+ const w=window.open("","_blank");
+ if(!w){toast("Permita janelas pop-up para gerar o PDF.");return}
+ w.document.open();w.document.write(doc);w.document.close();
 };
 const installBtn=$("installAppBtn");let installPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;installBtn.classList.remove("hidden")});

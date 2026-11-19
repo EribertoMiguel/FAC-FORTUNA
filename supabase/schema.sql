@@ -1,73 +1,61 @@
--- OneState: execute este arquivo no SQL Editor do Supabase.
-create extension if not exists pgcrypto;
-
-create table if not exists public.members (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  team text not null default 'Sem equipe' check (team in ('Sem equipe','Carro 1','Carro 2','Carro 3')),
-  daily_essence integer not null default 0 check (daily_essence >= 0),
-  delivery_per_operation integer not null default 120 check (delivery_per_operation >= 0),
-  active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.entries (
-  id uuid primary key default gen_random_uuid(),
-  member_id uuid not null references public.members(id) on delete restrict,
-  entry_date date not null default current_date,
-  kind text not null check (kind in ('production','delivery')),
-  essence integer not null default 0 check (essence >= 0),
-  jewels integer not null default 0 check (jewels >= 0),
-  team text not null default 'Sem equipe' check (team in ('Sem equipe','Carro 1','Carro 2','Carro 3')),
-  time_slot text,
-  status text not null default 'Pendente' check (status in ('Pendente','Sim','Não','N/A')),
-  notes text,
-  created_at timestamptz not null default now(),
-  constraint entry_kind_values check (
-    (kind='production' and essence>=0 and jewels=0) or
-    (kind='delivery' and essence=0 and jewels>=0)
-  )
-);
-create index if not exists entries_date_idx on public.entries(entry_date);
-create index if not exists entries_member_idx on public.entries(member_id);
-
-create table if not exists public.settings (
-  id integer primary key check (id=1),
-  ratio integer not null default 10 check (ratio>0),
-  warehouse_capacity integer not null default 2500,
-  vault_capacity integer not null default 250,
-  machines integer not null default 5,
-  essence_per_machine integer not null default 250,
-  cycle_minutes integer not null default 482,
-  delivery_quantity integer not null default 120,
-  delivery_count integer not null default 4
-);
-insert into public.settings(id) values(1) on conflict(id) do nothing;
-
-alter table public.members enable row level security;
-alter table public.entries enable row level security;
-alter table public.settings enable row level security;
-
--- Somente usuário autenticado com app_metadata.role = 'admin' acessa dados.
-create policy "admin full access members" on public.members
-for all to authenticated
-using ((auth.jwt()->'app_metadata'->>'role')='admin')
-with check ((auth.jwt()->'app_metadata'->>'role')='admin');
-
-create policy "admin full access entries" on public.entries
-for all to authenticated
-using ((auth.jwt()->'app_metadata'->>'role')='admin')
-with check ((auth.jwt()->'app_metadata'->>'role')='admin');
-
-create policy "admin full access settings" on public.settings
-for all to authenticated
-using ((auth.jwt()->'app_metadata'->>'role')='admin')
-with check ((auth.jwt()->'app_metadata'->>'role')='admin');
-
--- IMPORTANTE:
--- 1) Crie um usuário pelo Supabase Authentication > Users.
--- 2) No SQL Editor, substitua o UUID abaixo pelo ID desse usuário e execute:
--- update auth.users
--- set raw_app_meta_data = coalesce(raw_app_meta_data,'{}'::jsonb) || '{"role":"admin"}'::jsonb
--- where id = 'UUID-DO-USUARIO-ADMIN';
--- Não use user_metadata para a função administrativa: app_metadata é controlado pelo servidor.
+-- OneState: execute este arquivo no SQL Editor do Supabase.\ncreate extension if not exists pgcrypto;\n\ncreate table if not exists public.members (\n  id uuid primary key default gen_random_uuid(),\n  name text not null,\n  team text not null default 'Sem equipe' check (team in ('Sem equipe','Carro 1','Carro 2','Carro 3')),\n  daily_essence integer not null default 0 check (daily_essence >= 0),\n  delivery_per_operation integer not null default 120 check (delivery_per_operation >= 0),\n  active boolean not null default true,\n  roster_position integer,\n  game_level integer not null default 1,\n  member_rank text not null default 'CRIA',\n  honor_points bigint not null default 0,\n  activity text not null default 'Sem informação',\n  created_at timestamptz not null default now()\n);\n\ncreate table if not exists public.entries (\n  id uuid primary key default gen_random_uuid(),\n  member_id uuid not null references public.members(id) on delete restrict,\n  entry_date date not null default current_date,\n  kind text not null check (kind in ('production','delivery')),\n  essence integer not null default 0 check (essence >= 0),\n  jewels integer not null default 0 check (jewels >= 0),\n  team text not null default 'Sem equipe' check (team in ('Sem equipe','Carro 1','Carro 2','Carro 3')),\n  time_slot text,\n  status text not null default 'Pendente' check (status in ('Pendente','Sim','Não','N/A')),\n  notes text,\n  created_at timestamptz not null default now(),\n  constraint entry_kind_values check (\n    (kind='production' and essence>=0 and jewels=0) or\n    (kind='delivery' and essence=0 and jewels>=0)\n  )\n);\ncreate index if not exists entries_date_idx on public.entries(entry_date);\ncreate index if not exists entries_member_idx on public.entries(member_id);\n\ncreate table if not exists public.settings (\n  id integer primary key check (id=1),\n  ratio integer not null default 10 check (ratio>0),\n  warehouse_capacity integer not null default 2500,\n  vault_capacity integer not null default 250,\n  machines integer not null default 5,\n  essence_per_machine integer not null default 250,\n  cycle_minutes integer not null default 482,\n  delivery_quantity integer not null default 120,\n  delivery_count integer not null default 4\n);\ninsert into public.settings(id) values(1) on conflict(id) do nothing;\n\nalter table public.members enable row level security;\nalter table public.entries enable row level security;\nalter table public.settings enable row level security;\n\n-- Consulta pública: qualquer visitante pode visualizar dados; somente administrador autenticado pode alterar.\n-- Remova políticas antigas para permitir reexecutar este bloco sem duplicidade.\ndrop policy if exists "admin full access members" on public.members;\ndrop policy if exists "admin full access entries" on public.entries;\ndrop policy if exists "admin full access settings" on public.settings;\ndrop policy if exists "public read members" on public.members;\ndrop policy if exists "public read entries" on public.entries;\ndrop policy if exists "public read settings" on public.settings;\ncreate policy "public read members" on public.members for select to anon, authenticated using (true);\ncreate policy "admin full access members" on public.members\nfor all to authenticated\nusing ((auth.jwt()->'app_metadata'->>'role')='admin')\nwith check ((auth.jwt()->'app_metadata'->>'role')='admin');\n\ncreate policy "public read entries" on public.entries for select to anon, authenticated using (true);\ncreate policy "admin full access entries" on public.entries\nfor all to authenticated\nusing ((auth.jwt()->'app_metadata'->>'role')='admin')\nwith check ((auth.jwt()->'app_metadata'->>'role')='admin');\n\ncreate policy "public read settings" on public.settings for select to anon, authenticated using (true);\ncreate policy "admin full access settings" on public.settings\nfor all to authenticated\nusing ((auth.jwt()->'app_metadata'->>'role')='admin')\nwith check ((auth.jwt()->'app_metadata'->>'role')='admin');\n\n-- IMPORTANTE:\n-- 1) Crie um usuário pelo Supabase Authentication > Users.\n-- 2) No SQL Editor, substitua o UUID abaixo pelo ID desse usuário e execute:\n-- update auth.users\n-- set raw_app_meta_data = coalesce(raw_app_meta_data,'{}'::jsonb) || '{"role":"admin"}'::jsonb\n-- where id = 'UUID-DO-USUARIO-ADMIN';\n-- Não use user_metadata para a função administrativa: app_metadata é controlado pelo servidor.\n\n\n-- Cadastro inicial dos 30 membros identificados nas capturas enviadas.\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Dudinha Mazzi','Sem equipe',0,120,true,7,35,'PISTA',43350,'17 h'
+where not exists (select 1 from public.members where name='Dudinha Mazzi');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Tralha Lenin','Sem equipe',0,120,true,8,25,'PISTA',43882,'1 d'
+where not exists (select 1 from public.members where name='Tralha Lenin');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Dawson Davies','Sem equipe',0,120,true,9,30,'PISTA',117959,'14 h'
+where not exists (select 1 from public.members where name='Dawson Davies');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Tempestade Kl','Sem equipe',0,120,true,10,28,'PISTA',377210,'Online'
+where not exists (select 1 from public.members where name='Tempestade Kl');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Mckevin Richard','Sem equipe',0,120,true,11,20,'PISTA',26324,'1 d'
+where not exists (select 1 from public.members where name='Mckevin Richard');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Joker Suicida','Sem equipe',0,120,true,12,16,'PISTA',49020,'1 d'
+where not exists (select 1 from public.members where name='Joker Suicida');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Tiago Lobo','Sem equipe',0,120,true,13,29,'CRIA',189308,'1 h'
+where not exists (select 1 from public.members where name='Tiago Lobo');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Pedrinho Targaryen','Sem equipe',0,120,true,14,26,'CRIA',271274,'3 h'
+where not exists (select 1 from public.members where name='Pedrinho Targaryen');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Clayton Clg','Sem equipe',0,120,true,15,29,'CRIA',132719,'20 h'
+where not exists (select 1 from public.members where name='Clayton Clg');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Kelvin Duran','Sem equipe',0,120,true,16,29,'CRIA',237622,'12 min'
+where not exists (select 1 from public.members where name='Kelvin Duran');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'John Shefft','Sem equipe',0,120,true,17,27,'CRIA',178178,'1 h'
+where not exists (select 1 from public.members where name='John Shefft');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Sr Matue','Sem equipe',0,120,true,18,24,'CRIA',600,'2 d'
+where not exists (select 1 from public.members where name='Sr Matue');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Paivaa Lenin','Sem equipe',0,120,true,19,34,'CRIA',34770,'Online'
+where not exists (select 1 from public.members where name='Paivaa Lenin');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Gomes Profiro','Sem equipe',0,120,true,20,25,'CRIA',191220,'26 min'
+where not exists (select 1 from public.members where name='Gomes Profiro');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Erick Rodrigues','Sem equipe',0,120,true,21,24,'CRIA',337768,'37 min'
+where not exists (select 1 from public.members where name='Erick Rodrigues');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Dmitry Haedchottet','Sem equipe',0,120,true,22,20,'CRIA',218642,'11 min'
+where not exists (select 1 from public.members where name='Dmitry Haedchottet');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Stany Targaryen','Sem equipe',0,120,true,23,32,'CRIA',39960,'15 h'
+where not exists (select 1 from public.members where name='Stany Targaryen');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Rlk Pk','Sem equipe',0,120,true,24,36,'CRIA',26560,'2 h'
+where not exists (select 1 from public.members where name='Rlk Pk');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Pesadelo Umcincosete','Sem equipe',0,120,true,31,30,'CRIA',25570,'Online'
+where not exists (select 1 from public.members where name='Pesadelo Umcincosete');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Angel Baby','Sem equipe',0,120,true,32,30,'CRIA',107882,'38 min'
+where not exists (select 1 from public.members where name='Angel Baby');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Alivz Mazzi','Sem equipe',0,120,true,33,32,'CRIA',59239,'18 h'
+where not exists (select 1 from public.members where name='Alivz Mazzi');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Sr Achilles','Sem equipe',0,120,true,34,22,'CRIA',3540,'23 h'
+where not exists (select 1 from public.members where name='Sr Achilles');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Coringa Avs','Sem equipe',0,120,true,35,23,'CRIA',9670,'23 h'
+where not exists (select 1 from public.members where name='Coringa Avs');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Nadine Targaryen','Sem equipe',0,120,true,36,38,'CRIA',202592,'9 h'
+where not exists (select 1 from public.members where name='Nadine Targaryen');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Bzbinhazaya Mazzi','Sem equipe',0,120,true,37,22,'CRIA',105426,'2 h'
+where not exists (select 1 from public.members where name='Bzbinhazaya Mazzi');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Flor Derejeira','Sem equipe',0,120,true,38,34,'CRIA',141970,'4 h'
+where not exists (select 1 from public.members where name='Flor Derejeira');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Mirna Targaryen','Sem equipe',0,120,true,39,32,'CRIA',120,'55 min'
+where not exists (select 1 from public.members where name='Mirna Targaryen');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Luaa Mazzarati','Sem equipe',0,120,true,40,26,'CRIA',11600,'1 h'
+where not exists (select 1 from public.members where name='Luaa Mazzarati');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Bradock Kille','Sem equipe',0,120,true,41,30,'CRIA',21364,'2 h'
+where not exists (select 1 from public.members where name='Bradock Kille');\ninsert into public.members(name,team,daily_essence,delivery_per_operation,active,game_level,member_rank,honor_points,activity)
+select 'Guuh Eduuh','Sem equipe',0,120,true,42,31,'CRIA',183175,'Online'
+where not exists (select 1 from public.members where name='Guuh Eduuh');\n

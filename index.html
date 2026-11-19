@@ -7,7 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <main id="loginView" class="login-wrap">
+  <main id="loginView" class="login-wrap hidden">
     <section class="login-card">
       <div class="brand-mark">OS</div><h1>OneState</h1><p>Central de Produção e Entregas</p>
       <form id="loginForm">
@@ -20,17 +20,17 @@
     </section>
   </main>
 
-  <div id="appView" class="hidden">
-    <header class="topbar"><div><b>OneState</b><span>Central de Operações</span></div><button id="logoutBtn" class="ghost">Sair</button></header>
+  <div id="appView">
+    <header class="topbar"><div><b>GANGUES · OneState</b><span>Central de Produção e Entregas</span></div><div><button id="adminLoginBtn" class="ghost">Área do administrador</button><button id="logoutBtn" class="ghost hidden">Sair</button></div></header>
     <nav class="tabs">
-      <button class="tab active" data-page="dashboard">Visão geral</button>
+      <button class="tab active" data-page="dashboard">Informações</button>
       <button class="tab" data-page="members">Membros</button>
-      <button class="tab" data-page="entries">Lançamentos</button>
+      <button class="tab admin-only" data-page="entries">Lançamentos</button>
       <button class="tab" data-page="teams">Equipes</button>
       <button class="tab" data-page="simulator">Simulador</button>
       <button class="tab" data-page="timer">Temporizador</button>
       <button class="tab" data-page="reports">Relatórios</button>
-      <button class="tab" data-page="settings">Configurações</button>
+      <button class="tab admin-only" data-page="settings">Configurações</button>
     </nav>
     <main class="container">
       <section id="dashboard" class="page active">
@@ -40,6 +40,8 @@
           <article><small>Joias entregues hoje</small><strong id="kDelivered">0</strong></article>
           <article><small>Membros ativos</small><strong id="kMembers">0</strong></article>
         </div>
+        <article class="panel gangue-banner"><div><small>PAINEL DA GANGUE</small><h2>EMI METRALHA</h2><p>Central de Produção, Membros e Entregas</p></div><div class="banner-stats"><b>42/45</b><span>Membros registrados nas imagens</span></div></article>
+        <article class="panel"><h2>Membros da gangue · Classificação</h2><p class="muted">Dados transcritos das imagens enviadas. Os membros não precisam de login.</p><div class="table-wrap"><table class="roster"><thead><tr><th>#</th><th>Membro</th><th>Nível</th><th>Ranq. membro</th><th>Pontos de honra</th><th>Atividade</th></tr></thead><tbody id="publicRoster"></tbody></table></div></article>
         <div class="grid two">
           <article class="panel"><h2>Resumo do dia</h2><label>Data de referência<input type="date" id="dashDate"></label><div id="dailySummary"></div></article>
           <article class="panel"><h2>Parâmetros de produção</h2><div id="productionSummary"></div></article>
@@ -52,13 +54,13 @@
           <form id="memberForm" class="form-grid">
             <label>Nome<input id="memberName" required></label>
             <label>Equipe<select id="memberTeam"><option>Sem equipe</option><option>Carro 1</option><option>Carro 2</option><option>Carro 3</option></select></label>
-            <label>Essência diária prevista<input id="memberEssence" type="number" min="0" value="0" required></label>
+            <label>Nível no jogo<input id="memberLevel" type="number" min="0" value="1"></label>\n            <label>Ranq. do membro<input id="memberRank" value="CRIA"></label>\n            <label>Pontos de honra<input id="memberHonor" type="number" min="0" value="0"></label>\n            <label>Atividade<input id="memberActivity" value="Online"></label>\n            <label>Essência diária prevista<input id="memberEssence" type="number" min="0" value="0" required></label>
             <label>Entrega padrão por operação<input id="memberDelivery" type="number" min="0" value="120" required></label>
             <label>Status<select id="memberActive"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
             <button class="primary">Cadastrar membro</button>
           </form>
         </article>
-        <article class="panel"><h2>Todos os membros</h2><div class="table-wrap"><table><thead><tr><th>Nome</th><th>Equipe</th><th>Essência/dia</th><th>Entrega/operação</th><th>Status</th><th>Essência acumulada</th><th>Joias entregues</th><th>Ações</th></tr></thead><tbody id="membersTable"></tbody></table></div></article>
+        <article class="panel"><h2>Todos os membros</h2><div class="table-wrap"><table><thead><tr><th>Nome</th><th>Equipe</th><th>Essência/dia</th><th>Entrega/operação</th><th>Nível</th><th>Ranq.</th><th>Pontos</th><th>Atividade</th><th>Status</th><th>Essência acumulada</th><th>Joias entregues</th><th>Ações</th></tr></thead><tbody id="membersTable"></tbody></table></div></article>
       </section>
 
       <section id="entries" class="page">

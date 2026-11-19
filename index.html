@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OneState | Central de Operações</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <main id="loginView" class="login-wrap">
+    <section class="login-card">
+      <div class="brand-mark">OS</div><h1>OneState</h1><p>Central de Produção e Entregas</p>
+      <form id="loginForm">
+        <label>E-mail do administrador<input id="email" type="email" required autocomplete="username"></label>
+        <label>Senha<input id="password" type="password" required autocomplete="current-password"></label>
+        <button class="primary">Entrar</button>
+      </form>
+      <div id="loginMessage" class="message"></div>
+      <small>Acesso exclusivo ao administrador.</small>
+    </section>
+  </main>
+
+  <div id="appView" class="hidden">
+    <header class="topbar"><div><b>OneState</b><span>Central de Operações</span></div><button id="logoutBtn" class="ghost">Sair</button></header>
+    <nav class="tabs">
+      <button class="tab active" data-page="dashboard">Visão geral</button>
+      <button class="tab" data-page="members">Membros</button>
+      <button class="tab" data-page="entries">Lançamentos</button>
+      <button class="tab" data-page="teams">Equipes</button>
+      <button class="tab" data-page="simulator">Simulador</button>
+      <button class="tab" data-page="timer">Temporizador</button>
+      <button class="tab" data-page="reports">Relatórios</button>
+      <button class="tab" data-page="settings">Configurações</button>
+    </nav>
+    <main class="container">
+      <section id="dashboard" class="page active">
+        <div class="metrics">
+          <article><small>Essência registrada hoje</small><strong id="kEssence">0</strong></article>
+          <article><small>Joias equivalentes</small><strong id="kJewels">0</strong></article>
+          <article><small>Joias entregues hoje</small><strong id="kDelivered">0</strong></article>
+          <article><small>Membros ativos</small><strong id="kMembers">0</strong></article>
+        </div>
+        <div class="grid two">
+          <article class="panel"><h2>Resumo do dia</h2><label>Data de referência<input type="date" id="dashDate"></label><div id="dailySummary"></div></article>
+          <article class="panel"><h2>Parâmetros de produção</h2><div id="productionSummary"></div></article>
+        </div>
+        <article class="panel"><h2>Agenda de entregas</h2><div class="grid two"><div class="schedule"><b>12h30</b><strong id="middayGoal">240 joias</strong><small>2 entregas de 120</small></div><div class="schedule"><b>21h00</b><strong id="eveningGoal">240 joias</strong><small>2 entregas de 120</small></div></div></article>
+      </section>
+
+      <section id="members" class="page">
+        <article class="panel"><h2>Cadastrar membro</h2>
+          <form id="memberForm" class="form-grid">
+            <label>Nome<input id="memberName" required></label>
+            <label>Equipe<select id="memberTeam"><option>Sem equipe</option><option>Carro 1</option><option>Carro 2</option><option>Carro 3</option></select></label>
+            <label>Essência diária prevista<input id="memberEssence" type="number" min="0" value="0" required></label>
+            <label>Entrega padrão por operação<input id="memberDelivery" type="number" min="0" value="120" required></label>
+            <label>Status<select id="memberActive"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
+            <button class="primary">Cadastrar membro</button>
+          </form>
+        </article>
+        <article class="panel"><h2>Todos os membros</h2><div class="table-wrap"><table><thead><tr><th>Nome</th><th>Equipe</th><th>Essência/dia</th><th>Entrega/operação</th><th>Status</th><th>Essência acumulada</th><th>Joias entregues</th><th>Ações</th></tr></thead><tbody id="membersTable"></tbody></table></div></article>
+      </section>
+
+      <section id="entries" class="page">
+        <article class="panel"><h2>Novo lançamento</h2>
+          <form id="entryForm" class="form-grid">
+            <label>Membro<select id="entryMember" required></select></label>
+            <label>Data<input id="entryDate" type="date" required></label>
+            <label>Tipo<select id="entryType"><option value="production">Produção de essência</option><option value="delivery">Entrega de joias</option></select></label>
+            <label>Quantidade de essência<input id="entryEssence" type="number" min="0" value="0"></label>
+            <label>Quantidade de joias<input id="entryJewels" type="number" min="0" value="120"></label>
+            <label>Horário<select id="entryTime"><option value="12:30">12h30</option><option value="21:00">21h00</option><option value="Outro">Outro</option></select></label>
+            <label>Equipe<select id="entryTeam"><option>Sem equipe</option><option>Carro 1</option><option>Carro 2</option><option>Carro 3</option></select></label>
+            <label>Status da entrega<select id="entryStatus"><option value="Pendente">Pendente</option><option value="Sim">Realizada</option><option value="Não">Não realizada</option></select></label>
+            <label class="wide">Observação<input id="entryNotes"></label>
+            <button class="primary">Salvar lançamento</button>
+          </form>
+        </article>
+        <article class="panel"><h2>Geração diária em lote</h2>
+          <div class="form-grid">
+            <label>Data<input id="batchDate" type="date"></label>
+            <label>Horário da entrega<select id="batchTime"><option value="12:30">12h30</option><option value="21:00">21h00</option></select></label>
+            <button id="batchProduction" type="button" class="secondary">Gerar produção de todos os ativos</button>
+            <button id="batchDelivery" type="button" class="secondary">Gerar entregas pendentes de todos os ativos</button>
+          </div>
+          <p class="muted">A geração em lote utiliza as metas cadastradas por membro. As entregas criadas ficam pendentes até confirmação.</p>
+        </article>
+        <article class="panel"><h2>Histórico</h2><div class="filters"><input id="filterDate" type="date"><select id="filterTeam"><option value="">Todas as equipes</option><option>Carro 1</option><option>Carro 2</option><option>Carro 3</option></select><select id="filterStatus"><option value="">Todos os status</option><option>Pendente</option><option>Sim</option><option>Não</option></select></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Membro</th><th>Tipo</th><th>Essência</th><th>Joias</th><th>Equipe</th><th>Horário</th><th>Status</th><th>Ação</th></tr></thead><tbody id="entriesTable"></tbody></table></div></article>
+      </section>
+
+      <section id="teams" class="page"><article class="panel"><h2>Desempenho por carro</h2><div id="teamCards" class="grid three"></div></article></section>
+      <section id="simulator" class="page">
+        <article class="panel"><h2>Simulador de produção e entregas</h2><p class="muted">Altere os valores para simular um cenário. A simulação não grava lançamentos.</p>
+          <div class="form-grid">
+            <label>Essência disponível<input id="simEssence" type="number" min="0" value="2500"></label>
+            <label>Quantidade de máquinas<input id="simMachines" type="number" min="1" value="5"></label>
+            <label>Essência por máquina/ciclo<input id="simEssMachine" type="number" min="1" value="250"></label>
+            <label>Essência por joia<input id="simRatio" type="number" min="1" value="10"></label>
+            <label>Duração do ciclo (horas)<input id="simHours" type="number" min="0" value="8"></label>
+            <label>Duração adicional (minutos)<input id="simMinutes" type="number" min="0" max="59" value="2"></label>
+            <label>Meta de entregas no dia<input id="simTarget" type="number" min="0" value="480"></label>
+            <label>Estoque inicial de joias<input id="simJewels" type="number" min="0" value="0"></label>
+          </div>
+          <div class="actions"><button id="runSimulation" class="primary" type="button">Calcular simulação</button><button id="resetSimulation" class="secondary" type="button">Restaurar parâmetros atuais</button></div>
+          <div id="simulationResult" class="simulation-results"></div>
+        </article>
+      </section>
+      <section id="timer" class="page">
+        <article class="panel"><h2>Temporizador das máquinas</h2><p class="muted">Cada máquina possui seu próprio ciclo. Inicie, pause ou reinicie o contador. O estado fica salvo neste navegador.</p>
+          <div class="timer-toolbar"><label>Duração do ciclo (minutos)<input id="timerCycle" type="number" min="1" value="482"></label><button id="applyTimerCycle" class="secondary" type="button">Aplicar duração</button><button id="startAllTimers" class="primary" type="button">Iniciar todas</button><button id="pauseAllTimers" class="secondary" type="button">Pausar todas</button><button id="resetAllTimers" class="secondary" type="button">Reiniciar todas</button></div>
+          <div id="machineTimers" class="grid three"></div>
+        </article>
+      </section>
+      <section id="reports" class="page"><article class="panel"><h2>Relatório por período</h2><div class="form-grid"><label>Data inicial<input id="fromDate" type="date"></label><label>Data final<input id="toDate" type="date"></label><button id="runReport" class="primary">Gerar relatório</button></div><div id="reportResult"></div></article></section>
+      <section id="settings" class="page"><article class="panel"><h2>Parâmetros</h2><form id="settingsForm" class="form-grid">
+        <label>Essências por joia<input id="sRatio" type="number" min="1" value="10"></label>
+        <label>Capacidade do armazém<input id="sWarehouse" type="number" min="1" value="2500"></label>
+        <label>Limite do cofre (joias)<input id="sVault" type="number" min="1" value="250"></label>
+        <label>Número de máquinas<input id="sMachines" type="number" min="1" value="5"></label>
+        <label>Essências por máquina/ciclo<input id="sEssMachine" type="number" min="1" value="250"></label>
+        <label>Tempo de consumo (minutos)<input id="sCycle" type="number" min="1" value="482"></label>
+        <label>Joias por entrega<input id="sDeliveryQty" type="number" min="1" value="120"></label>
+        <label>Entregas por dia<input id="sDeliveryCount" type="number" min="1" value="4"></label>
+        <button class="primary">Salvar parâmetros</button>
+      </form><div id="calcSummary" class="muted"></div></article>
+      <article class="panel"><h2>Backup</h2><button id="exportBackup" class="secondary">Exportar backup JSON</button><p class="muted">O backup inclui membros, lançamentos e parâmetros. Guarde-o em local seguro.</p></article></section>
+    </main>
+  </div>
+  <div id="toast" role="status"></div>
+  <script type="module" src="js/app.js"></script>
+</body></html>

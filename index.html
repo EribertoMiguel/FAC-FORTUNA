@@ -56,8 +56,9 @@
           <article><small>Joias entregues hoje</small><strong id="kDelivered">0</strong></article>
           <article><small>Membros ativos</small><strong id="kMembers">0</strong></article>
         </div>
-        <article class="panel gangue-banner"><div><small>PAINEL DA GANGUE</small><h2>EMI METRALHA</h2><p>Central de Produção, Membros e Entregas</p></div><div class="banner-stats"><b>42/45</b><span>Membros registrados nas imagens</span></div></article>
-        <article class="panel"><h2>Membros da gangue · Classificação</h2><p class="muted">Dados transcritos das imagens enviadas. Os membros não precisam de login.</p><div class="table-wrap"><table class="roster"><thead><tr><th>#</th><th>Membro</th><th>Nível</th><th>Classificação do membro</th><th>Pontos de honra</th><th>Atividade</th></tr></thead><tbody id="publicRoster"></tbody></table></div></article>
+        <article class="panel gangue-banner"><div><small>PAINEL DA GANGUE</small><h2>EMI METRALHA</h2><p>Central de Produção, Membros e Entregas</p></div><div class="banner-stats"><b id="rosterCount">0/45</b><span>Membros cadastrados</span></div></article>
+        <article class="panel"><h2>TOP 5 · Melhores membros</h2><p class="muted">Ranking atualizado automaticamente pelos pontos de honra cadastrados.</p><div id="topMembers" class="top-members"></div></article>
+        <article class="panel"><h2>Lista de membros da gangue</h2><p class="muted">Relação completa dos membros cadastrados.</p><div class="table-wrap"><table class="roster"><thead><tr><th>#</th><th>Membro</th><th>Pontos de honra</th></tr></thead><tbody id="publicRoster"></tbody></table></div></article>
         <div class="grid two">
           <article class="panel"><h2>Resumo do dia</h2><label>Data de referência<input type="date" id="dashDate"></label><div id="dailySummary"></div></article>
           <article class="panel"><h2>Parâmetros de produção</h2><div id="productionSummary"></div></article>
@@ -80,7 +81,7 @@
             <button class="primary">Cadastrar membro</button>
           </form>
         </article>
-        <article class="panel"><h2>Todos os membros</h2><div class="table-wrap"><table><thead><tr><th>Nome</th><th>Equipe</th><th>Essência/dia</th><th>Entrega/operação</th><th>Nível</th><th>Classificação</th><th>Pontos</th><th>Atividade</th><th>Status</th><th>Essência acumulada</th><th>Joias entregues</th><th>Ações</th></tr></thead><tbody id="membersTable"></tbody></table></div></article>
+        <article class="panel"><h2>Todos os membros</h2><div class="table-wrap"><table><thead><tr><th>Nome</th><th>Equipe</th><th>Essência/dia</th><th>Entrega de joias</th><th>Pontos</th></tr></thead><tbody id="membersTable"></tbody></table></div></article>
       </section>
 
       <section id="entries" class="page">

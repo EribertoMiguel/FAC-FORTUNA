@@ -3,25 +3,41 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>OneState | Central de Operações</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#142d4b">
+  <link rel="icon" href="icons/onestate.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <main id="loginView" class="login-wrap hidden">
     <section class="login-card">
       <div class="brand-mark">OS</div><h1>OneState</h1><p>Central de Produção e Entregas</p>
-      <form id="loginForm">
-        <label>E-mail do administrador<input id="email" type="email" required autocomplete="username"></label>
-        <label>Senha<input id="password" type="password" required autocomplete="current-password"></label>
-        <button class="primary">Entrar</button>
-      </form>
+      <section id="adminLoginPanel">
+        <form id="loginForm">
+          <label>Usuário do administrador<input id="username" type="text" required autocomplete="username" value="migueltargaryen"></label>
+          <label>Senha<input id="password" type="password" required autocomplete="current-password"></label>
+          <button class="primary">Entrar</button>
+        </form>
+        <button id="showAdminRegister" class="text-link" type="button">Cadastrar administrador pela primeira vez</button>
+      </section>
+      <section id="adminRegisterPanel" class="hidden">
+        <h2 class="auth-subtitle">Cadastro do administrador</h2>
+        <p class="auth-help">O cadastro inicial só poderá ser realizado uma vez. Não é necessário informar e-mail.</p>
+        <form id="adminRegisterForm">
+          <label>Nome de usuário<input id="newAdminUsername" type="text" required minlength="4" maxlength="40" autocomplete="username" value="migueltargaryen"></label>
+          <label>Criar senha<input id="newAdminPassword" type="password" required minlength="8" autocomplete="new-password"></label>
+          <label>Confirmar senha<input id="confirmAdminPassword" type="password" required minlength="8" autocomplete="new-password"></label>
+          <button class="primary">Cadastrar administrador</button>
+        </form>
+        <button id="backToAdminLogin" class="text-link" type="button">Voltar para entrar</button>
+      </section>
       <div id="loginMessage" class="message"></div>
-      <small>Acesso exclusivo ao administrador.</small>
+      <small>Acesso administrativo protegido por usuário e senha.</small>
     </section>
   </main>
 
   <div id="appView">
-    <header class="topbar"><div><b>GANGUES · OneState</b><span>Central de Produção e Entregas</span></div><div><button id="adminLoginBtn" class="ghost">Área do administrador</button><button id="logoutBtn" class="ghost hidden">Sair</button></div></header>
+    <header class="topbar"><div><b>GANGUES · OneState</b><span>Central de Produção e Entregas</span></div><div><button id="installAppBtn" class="ghost hidden" type="button">Instalar aplicativo</button><button id="adminLoginBtn" class="ghost">Área do administrador</button><button id="logoutBtn" class="ghost hidden">Sair</button></div></header>
     <nav class="tabs">
       <button class="tab active" data-page="dashboard">Informações</button>
       <button class="tab" data-page="members">Membros</button>
@@ -41,7 +57,7 @@
           <article><small>Membros ativos</small><strong id="kMembers">0</strong></article>
         </div>
         <article class="panel gangue-banner"><div><small>PAINEL DA GANGUE</small><h2>EMI METRALHA</h2><p>Central de Produção, Membros e Entregas</p></div><div class="banner-stats"><b>42/45</b><span>Membros registrados nas imagens</span></div></article>
-        <article class="panel"><h2>Membros da gangue · Classificação</h2><p class="muted">Dados transcritos das imagens enviadas. Os membros não precisam de login.</p><div class="table-wrap"><table class="roster"><thead><tr><th>#</th><th>Membro</th><th>Nível</th><th>Ranq. membro</th><th>Pontos de honra</th><th>Atividade</th></tr></thead><tbody id="publicRoster"></tbody></table></div></article>
+        <article class="panel"><h2>Membros da gangue · Classificação</h2><p class="muted">Dados transcritos das imagens enviadas. Os membros não precisam de login.</p><div class="table-wrap"><table class="roster"><thead><tr><th>#</th><th>Membro</th><th>Nível</th><th>Classificação do membro</th><th>Pontos de honra</th><th>Atividade</th></tr></thead><tbody id="publicRoster"></tbody></table></div></article>
         <div class="grid two">
           <article class="panel"><h2>Resumo do dia</h2><label>Data de referência<input type="date" id="dashDate"></label><div id="dailySummary"></div></article>
           <article class="panel"><h2>Parâmetros de produção</h2><div id="productionSummary"></div></article>
@@ -54,13 +70,17 @@
           <form id="memberForm" class="form-grid">
             <label>Nome<input id="memberName" required></label>
             <label>Equipe<select id="memberTeam"><option>Sem equipe</option><option>Carro 1</option><option>Carro 2</option><option>Carro 3</option></select></label>
-            <label>Nível no jogo<input id="memberLevel" type="number" min="0" value="1"></label>\n            <label>Ranq. do membro<input id="memberRank" value="CRIA"></label>\n            <label>Pontos de honra<input id="memberHonor" type="number" min="0" value="0"></label>\n            <label>Atividade<input id="memberActivity" value="Online"></label>\n            <label>Essência diária prevista<input id="memberEssence" type="number" min="0" value="0" required></label>
+            <label>Nível no jogo<input id="memberLevel" type="number" min="0" value="1"></label>
+            <label>Classificação do membro<input id="memberRank" value="CRIA"></label>
+            <label>Pontos de honra<input id="memberHonor" type="number" min="0" value="0"></label>
+            <label>Atividade<input id="memberActivity" value="Online"></label>
+            <label>Essência diária prevista<input id="memberEssence" type="number" min="0" value="0" required></label>
             <label>Entrega padrão por operação<input id="memberDelivery" type="number" min="0" value="120" required></label>
             <label>Status<select id="memberActive"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
             <button class="primary">Cadastrar membro</button>
           </form>
         </article>
-        <article class="panel"><h2>Todos os membros</h2><div class="table-wrap"><table><thead><tr><th>Nome</th><th>Equipe</th><th>Essência/dia</th><th>Entrega/operação</th><th>Nível</th><th>Ranq.</th><th>Pontos</th><th>Atividade</th><th>Status</th><th>Essência acumulada</th><th>Joias entregues</th><th>Ações</th></tr></thead><tbody id="membersTable"></tbody></table></div></article>
+        <article class="panel"><h2>Todos os membros</h2><div class="table-wrap"><table><thead><tr><th>Nome</th><th>Equipe</th><th>Essência/dia</th><th>Entrega/operação</th><th>Nível</th><th>Classificação</th><th>Pontos</th><th>Atividade</th><th>Status</th><th>Essência acumulada</th><th>Joias entregues</th><th>Ações</th></tr></thead><tbody id="membersTable"></tbody></table></div></article>
       </section>
 
       <section id="entries" class="page">
@@ -125,7 +145,7 @@
         <label>Entregas por dia<input id="sDeliveryCount" type="number" min="1" value="4"></label>
         <button class="primary">Salvar parâmetros</button>
       </form><div id="calcSummary" class="muted"></div></article>
-      <article class="panel"><h2>Backup</h2><button id="exportBackup" class="secondary">Exportar backup JSON</button><p class="muted">O backup inclui membros, lançamentos e parâmetros. Guarde-o em local seguro.</p></article></section>
+      <article class="panel"><h2>Cópia de segurança</h2><div class="actions"><button id="exportBackup" class="secondary" type="button">Exportar cópia de segurança</button><button id="importBackupBtn" class="secondary" type="button">Restaurar cópia de segurança</button><input id="importBackupFile" type="file" accept=".json,application/json" hidden></div><p class="muted">Exporte os dados para um arquivo JSON e guarde-o em local seguro. A restauração substitui os dados atuais.</p></article></section>
     </main>
   </div>
   <div id="toast" role="status"></div>

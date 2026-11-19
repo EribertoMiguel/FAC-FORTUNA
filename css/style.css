@@ -41,3 +41,20 @@ tbody tr:nth-child(even){background:#26343a}
 .muted,.schedule small,.result-card small,.result-card p,.machine-timer p{color:#b5c2c3}
 .status{border-radius:2px}
 @media(max-width:650px){.gangue-banner{align-items:flex-start;gap:12px;flex-direction:column}.banner-stats{width:100%}.topbar{align-items:flex-start;gap:10px}.topbar>div:last-child{flex-wrap:wrap}}
+
+/* Tela de cadastro inicial do administrador */
+.auth-subtitle{margin:18px 0 6px;text-align:center;color:#f1f5f4;font-size:17px}.auth-help{font-size:12px;line-height:1.5;color:#b8c6c8;text-align:center}.text-link{display:block;margin:10px auto 0;background:transparent;border:0;color:#e6d15c;text-decoration:underline;cursor:pointer;font:inherit;font-size:12px}.login-card label{color:#e4eceb}.login-card .message{margin:8px 0}
+
+/* Telas de acesso e cadastro do administrador */
+.login-card{color:#1e293b}
+.login-card h1{font-size:30px;text-align:center;color:#173451;margin:10px 0 4px}
+.login-card p{color:#64748b;text-align:center}
+.login-card label{display:grid;gap:7px;color:#334155;font-size:13px;font-weight:700}
+.login-card input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;color:#172b42;background:#fff}
+.login-card input:focus{outline:2px solid #8bb8df;border-color:#27669b}
+.auth-subtitle{margin:8px 0;color:#173451;text-align:center;font-size:19px}
+.auth-help{margin:0;color:#64748b;text-align:center;font-size:13px;line-height:1.5}
+.text-link{display:block;margin:12px auto 0;padding:7px 10px;background:transparent;border:0;color:#245f91;text-decoration:underline;cursor:pointer;font:inherit;font-size:13px}
+.login-card .message{color:#b42318;min-height:20px;margin:10px 0;font-size:13px;text-align:center}
+.login-card small{color:#64748b;line-height:1.45}
+.login-card .primary{width:100%;min-height:44px}
